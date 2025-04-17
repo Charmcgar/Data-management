@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management with Google Sheets</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+</head>
+<body class="bg-gray-100 text-gray-800">
+    <div class="container mx-auto p-6">
+        <h1 class="text-2xl font-bold mb-4">Product Management</h1>
+        <div class="mb-6">
+            <input 
+                type="text" 
+                id="search-bar" 
+                class="w-full p-2 border border-gray-300 rounded" 
+                placeholder="Search for a product..."
+                oninput="filterProducts()">
+        </div>
+
+        <div id="product-list" class="grid grid-cols-1 gap-4">
+            <!-- Dynamic product entries will be rendered here -->
+        </div>
+
+        <div class="mt-6">
+            <h2 class="text-xl font-semibold mb-2">Add a New Product</h2>
+            <form id="add-product-form" class="flex flex-col gap-4">
+                <input type="text" id="product-name" placeholder="Product Name" class="p-2 border border-gray-300 rounded" required>
+                <textarea id="product-description" placeholder="Product Description" class="p-2 border border-gray-300 rounded" required></textarea>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Add Product</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const apiKey = "AIzaSyBbgi0fsGTdHUWdjkF6DydRifmBo7R_Gh0";
+        const spreadsheetId = "1gqYU1-1ZvMZjzpYLm7sYohITtQngBiIzefZjh3YRqGU";
+        const sheetName = "Sheet1";
+        const baseUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values`;
+
+        const fetchProducts = async () => {
+            const response = await fetch(`${baseUrl}/${sheetName}?key=${apiKey}`);
+            const data = await response.json();
+            return data.values || [];
+        };
+
+        const renderProducts = async () => {
+            const productContainer = document.getElementById('product-list');
+            productContainer.innerHTML = '';
+            const products = await fetchProducts();
+
+            products.forEach((product, index) => {
+                if (index === 0) return; // Skip header row
+                const [name, description] = product;
+                const productCard = document.createElement('div');
+                productCard.className = 'p-4 bg-white shadow rounded';
+                productCard.innerHTML = `
+                    <h3 class="text-lg font-bold">${name}</h3>
+                    <p>${description}</p>
+                `;
+                productContainer.appendChild(productCard);
+            });
+        };
+
+        const addProduct = async (name, description) => {
+            const response = await fetch(`${baseUrl}/${sheetName}:append?valueInputOption=RAW&key=${apiKey}`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    values: [[name, description]]
+                })
+            });
+
+            if (response.ok) {
+                alert("Product added successfully!");
+                renderProducts();
+            } else {
+                alert("Failed to add product.");
+            }
+        };
+
+        document.getElementById('add-product-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = document.getElementById('product-name').value;
+            const description = document.getElementById('product-description').value;
+            await addProduct(name, description);
+            document.getElementById('add-product-form').reset();
+        });
+
+        const filterProducts = async () => {
+            const query = document.getElementById('search-bar').value.toLowerCase();
+            const products = await fetchProducts();
+
+            const filteredProducts = products.filter(([name, description], index) => 
+                index > 0 && (name.toLowerCase().includes(query) || description.toLowerCase().includes(query))
+            );
+
+            const productContainer = document.getElementById('product-list');
+            productContainer.innerHTML = '';
+
+            filteredProducts.forEach(([name, description]) => {
+                const productCard = document.createElement('div');
+                productCard.className = 'p-4 bg-white shadow rounded';
+                productCard.innerHTML = `
+                    <h3 class="text-lg font-bold">${name}</h3>
+                    <p>${description}</p>
+                `;
+                productContainer.appendChild(productCard);
+            });
+        };
+
+        renderProducts();
+    </script>
+</body>
+</html>
