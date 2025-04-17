@@ -27,7 +27,14 @@
             <form id="add-product-form" class="flex flex-col gap-4">
                 <input type="text" id="product-name" placeholder="Product Name" class="p-2 border border-gray-300 rounded" required>
                 <textarea id="product-description" placeholder="Product Description" class="p-2 border border-gray-300 rounded" required></textarea>
-                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded">Add Product</button>
+
+                <div id="dynamic-fields" class="flex flex-col gap-2">
+                    <!-- Dynamic fields will be added here -->
+                </div>
+
+                <button type="button" id="add-field-btn" class="bg-gray-300 text-black px-4 py-2 rounded">Add More Fields</button>
+
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded mt-4">Add Product</button>
             </form>
         </div>
     </div>
@@ -38,6 +45,7 @@
         const sheetName = "Sheet1";
         const baseUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}:append?valueInputOption=RAW&key=${apiKey}`;
 
+        let dynamicFields = [];
 
         const fetchProducts = async () => {
             const response = await fetch(`${baseUrl}/${sheetName}?key=${apiKey}`);
@@ -52,25 +60,26 @@
 
             products.forEach((product, index) => {
                 if (index === 0) return; // Skip header row
-                const [name, description] = product;
+                const [name, description, ...fields] = product;
                 const productCard = document.createElement('div');
                 productCard.className = 'p-4 bg-white shadow rounded';
                 productCard.innerHTML = `
                     <h3 class="text-lg font-bold">${name}</h3>
                     <p>${description}</p>
+                    ${fields.map(field => `<p class="text-gray-600">${field}</p>`).join('')}
                 `;
                 productContainer.appendChild(productCard);
             });
         };
 
-        const addProduct = async (name, description) => {
+        const addProduct = async (name, description, fields) => {
             const response = await fetch(`${baseUrl}/${sheetName}:append?valueInputOption=RAW&key=${apiKey}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    values: [[name, description]]
+                    values: [[name, description, ...fields]]
                 })
             });
 
@@ -86,9 +95,35 @@
             e.preventDefault();
             const name = document.getElementById('product-name').value;
             const description = document.getElementById('product-description').value;
-            await addProduct(name, description);
+            const fields = dynamicFields.map(field => field.value);
+
+            await addProduct(name, description, fields);
             document.getElementById('add-product-form').reset();
+            dynamicFields = [];
+            renderProducts();
         });
+
+        const addDynamicField = () => {
+            const fieldId = `dynamic-field-${dynamicFields.length}`;
+            const fieldDiv = document.createElement('div');
+            fieldDiv.className = 'flex gap-2 items-center';
+            fieldDiv.innerHTML = `
+                <input type="text" id="${fieldId}" placeholder="Additional Product Info" class="p-2 border border-gray-300 rounded w-full">
+                <button type="button" class="text-red-500" onclick="removeField('${fieldId}')">Remove</button>
+            `;
+            document.getElementById('dynamic-fields').appendChild(fieldDiv);
+            dynamicFields.push(document.getElementById(fieldId));
+        };
+
+        const removeField = (fieldId) => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.parentElement.remove();
+                dynamicFields = dynamicFields.filter(f => f.id !== fieldId);
+            }
+        };
+
+        document.getElementById('add-field-btn').addEventListener('click', addDynamicField);
 
         const filterProducts = async () => {
             const query = document.getElementById('search-bar').value.toLowerCase();
