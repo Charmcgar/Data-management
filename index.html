@@ -36,7 +36,8 @@
         const apiKey = "AIzaSyBbgi0fsGTdHUWdjkF6DydRifmBo7R_Gh0";
         const spreadsheetId = "1gqYU1-1ZvMZjzpYLm7sYohITtQngBiIzefZjh3YRqGU";
         const sheetName = "Sheet1";
-        const baseUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values`;
+        const baseUrl = `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/${sheetName}:append?valueInputOption=RAW&key=${apiKey}`;
+
 
         const fetchProducts = async () => {
             const response = await fetch(`${baseUrl}/${sheetName}?key=${apiKey}`);
